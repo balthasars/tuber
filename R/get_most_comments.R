@@ -194,9 +194,38 @@ while (counter_while == 0 | !is.null(next_page_token)) {
 }
 return(all_data)
 
-retrieve_data_from_paginated_api <- function(video_id){
+retrieve_data_from_paginated_api <- function(video_id_input) {
 
+  # initialize objects for loop
+  all_data <- get_most_comments(filter = c(video_id = video_id_input), page_token = NULL)
+  counter_while <- 0
+  next_page_token <- unique(all_data$nextPageToken)
+
+  # loop over results until last nextPageToken
+  while (counter_while == 0 | !is.null(next_page_token)) {
+    next_data <- get_most_comments(
+      filter = c(video_id = video_id_input),
+      page_token = next_page_token
+    )
+
+    # overwrite `next_page_token` that was initialized outside loop
+    # with new content that was just retrieved in the data
+    next_page_token <- unique(next_data$nextPageToken)
+    counter_while <- counter_while + 1
+
+    # overwrite `all_data` that was initialized outside loop
+    # using `all_data` from outside of loop in first iteration
+    # and then using itself from previous iteration plus
+    # new `next_data`.
+    all_data <- dplyr::bind_rows(next_data, all_data)
+  }
+  return(all_data)
 }
+
+# new_example_with_function <- retrieve_data_from_paginated_api(video_id_input = "Hop_MfkXl7c")
+# new_example_with_function %>%
+#   dplyr::filter(totalReplyCount > 1 & is_reply)
+# length(unique(new_example_with_function$snippet_textOriginal))
 
 # example <- get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = NULL)
 # example %>%
