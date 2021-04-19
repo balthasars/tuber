@@ -8,10 +8,12 @@
 #' @importFrom httr upload_file content oauth_endpoints oauth_app oauth2.0_token
 #' @importFrom utils read.table
 #' @importFrom plyr ldply
-#' @importFrom dplyr bind_rows select pull filter mutate
+#' @importFrom dplyr bind_rows select pull filter mutate vars rename_at rename
+#' @importFrom rlang .data
+#' @importFrom stringr str_remove
 #' @importFrom tibble enframe
-#' @importFrom tidyselect everything all_of
-#' @importFrom tidyr pivot_wider unnest unnest_longer
+#' @importFrom tidyselect everything all_of starts_with
+#' @importFrom tidyr pivot_wider unnest unnest_longer unnest_wider
 #' @importFrom purrr map_df map_dbl
 #' @docType package
 NULL
