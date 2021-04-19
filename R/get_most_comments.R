@@ -85,11 +85,14 @@ parse_replies <- function(comment_thread) {
 #' get_most_comments(filter = c(video_id = "N708P-A45D0"))
 #' get_most_comments(filter = c(video_id = "N708P-A45D0"), max_results = 101)
 #' }
-get_most_comments <- function(filter = NULL, part = "snippet,replies",
-                              text_format = "html", max_results = 101, page_token = NULL, ...) {
+#'
+#'
+
+get_most_comments <- function(filter = NULL, part = "snippet,replies,id",
+                              text_format = "html", max_results = 100, page_token = NULL, ...) {
   if (max_results < 20) {
     stop("max_results only takes a value over 20.
-          Above 100, it outputs all the results.")
+            Above 100, it outputs all the results.")
   }
 
   if (text_format != "html" & text_format != "plainText") {
@@ -99,7 +102,7 @@ get_most_comments <- function(filter = NULL, part = "snippet,replies",
   if (!(names(filter) %in%
     c("video_id", "channel_id", "thread_id", "threads_related_to_channel"))) {
     stop("filter can only take one of values: channel_id, video_id, parent_id,
-      threads_related_to_channel.")
+        threads_related_to_channel.")
   }
 
   if (length(filter) != 1) stop("filter must be a vector of length 1.")
@@ -120,14 +123,17 @@ get_most_comments <- function(filter = NULL, part = "snippet,replies",
   querylist <- list(
     part = part, maxResults =
       ifelse(max_results > 100, 100, max_results),
-    textFormat = text_format
+    textFormat = text_format,
+    pageToken = page_token
   )
+
   querylist <- c(querylist, filter)
+  print(querylist)
 
   ## get first page of results of a comment thread and
   ## initialize objects with content of first page before
   ## proceeding to next pages of API response
-  res <- tuber_GET("commentThreads", querylist, ...)
+  res <- tuber:::tuber_GET("commentThreads", querylist, ...)
   # parse results
   snippet <- parse_snippet(res)
   comment_thread <- parse_comment_thread(snippet)
@@ -146,34 +152,69 @@ get_most_comments <- function(filter = NULL, part = "snippet,replies",
     comment_thread, replies
   ) %>%
     dplyr::select(-c(replies)) %>%
-    dplyr::filter(totalReplyCount > 1) %>%
+    # dplyr::filter(totalReplyCount > 1) %>%
     # make columns complete if missing to avoid NAs
     tidyr::fill(tidyselect::any_of(na_cols_1), .direction = "down")
 
   # get all following pages of comment thread
-  agg_res <- comments
+  # agg_res <- comments
 
-    #   # shouldn't this be `unique()`?
-  next_page_token <- res$nextPageToken
+  #   # shouldn't this be `unique()`?
+  # next_page_token <- unique(res$nextPageToken)
   print("erstes Mal")
   print(next_page_token)
 
-  while (!is.null(next_page_token)) {
-      print("zweites Mal")
-      print(next_page_token)
-      next_results <- get_most_comments(orig_filter,
-      part = part,
-      text_format = text_format,
-      simplify = FALSE,
-      max_results = 101,
-      page_token = next_page_token
-    )
-      agg_res <- rbind(next_results, agg_res)
-      # get token with link to next result page
-      next_page_token <- next_results$nextPageToken
-  print(next_page_token)
-  }
   print("finished")
-  return(agg_res)
+
+  comments
 }
 
+library(magrittr)
+tuber::yt_oauth(
+  app_id = Sys.getenv("YOUTUBE_API_APP_ID"),
+  app_secret = Sys.getenv("YOUTUBE_API_CLIENT_SECRET")
+)
+
+all_data <- get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = NULL)
+counter_while <- 0
+# next_page_token <- NULL
+next_page_token <- unique(all_data$nextPageToken)
+
+while (counter_while == 0 | !is.null(next_page_token)) {
+  next_data <- get_most_comments(
+    filter = c(video_id = "Hop_MfkXl7c"),
+    page_token = next_page_token
+  )
+  next_page_token <- unique(next_data$nextPageToken)
+  print(next_data)
+  counter_while <- counter_while + 1
+  message(paste(counter_while, ":", "counter_while"))
+  message(paste(next_page_token, ":", "next_page_token"))
+  all_data <- dplyr::bind_rows(next_data, all_data)
+}
+return(all_data)
+
+retrieve_data_from_paginated_api <- function(video_id){
+
+}
+
+# example <- get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = NULL)
+# example %>%
+#   tidyr::unnest(nextPageToken)
+#
+# get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = "QURTSl9pMjVDT2V3WGF5Nm5ha3ZYam1HbWVPMFVybTJuWk96R2UyOTZwNnVwSXFJdTJfUFVpSVI3VUxqbU1TSGpKWVpCcFpITEl4cm83dw==")
+# tuber::get_comment_threads(filter = c(video_id = "Hop_MfkXl7c")) %>%
+#   tibble::as_tibble()
+#
+# res_2 <- get_most_comments(filter = c(video_id = "Hop_MfkXl7c"))
+#
+# res_2$nextPageToken
+#
+# t1 <- "QURTSl9pMnM3TFpxY2FQUTVDNGVfTTBDRUF0Nm52R0RXNGRuM1R3a21fMDZhemR0aUtDeHRTWnV3UXpmREs0cnI0TmYzOXh2VTlzRXdOYw=="
+# t2 <- "QURTSl9pMHdOWXBXWlRBakdlQnk1VXBUNEljSXM0QTU0WkNuOEp2VFBiX0RMQlhMeDVGdEo1UTlpWm5BaEFTRGZZZWU4UmV0LVFMTmFydw=="
+# t3 <- "QURTSl9pMlY5M1Q1VkxsZW9RbXR0VG1acXkzRjRMaDYxcEc4c05UenVUc0VIR0tXbmZmVHU2V3RVdC1WUmlHaW5wa19WUlJfS19vSGEzNA=="
+#
+# get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = t1)
+# get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = t2)
+# get_most_comments(filter = c(video_id = "Hop_MfkXl7c"), page_token = t3)
+#
