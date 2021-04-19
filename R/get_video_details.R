@@ -7,9 +7,8 @@ conditional_unnest_wider <- function(data_input, var) {
   }
 }
 
-
-json_to_df <- function(res) {
-  intermediate <- res %>%
+parse_snippet <- function(res){
+  res %>%
     tibble::enframe() %>%
     tidyr::pivot_wider() %>%
     tidyr::unnest(cols = c(kind, etag)) %>%
@@ -20,8 +19,10 @@ json_to_df <- function(res) {
     # reflect level of nesting in column name for those that may not be unique
     dplyr::rename(items_kind = kind, items_etag = etag) %>%
     tidyr::unnest_wider(snippet)
+}
 
-  intermediate_2 <- intermediate %>%
+parse_video_details <- function(res) {
+  res %>%
     # fields that may not be available:
     # live streaming details
     conditional_unnest_wider(var = "liveStreamingDetails") %>%
@@ -46,9 +47,6 @@ json_to_df <- function(res) {
     conditional_unnest_wider(var = "thumbnails_medium") %>%
     conditional_unnest_wider(var = "thumbnails_high") %>%
     conditional_unnest_wider(var = "thumbnails_maxres")
-
-
-  intermediate_2
 }
 
 #' Get Details of a Video or Videos
@@ -124,7 +122,8 @@ get_video_details <- function(video_id = NULL, part = "snippet", as.data.frame =
   }
 
   if (as.data.frame) {
-    raw_res <- json_to_df(raw_res)
+    snippet_df <- parse_snippet(raw_res)
+    raw_res <- parse_video_details(snippet_df)
   }
 
   raw_res
