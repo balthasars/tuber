@@ -7,6 +7,7 @@ parse_comment_thread <- function(res) {
     conditional_unnest_wider(var = "topLevelComment") %>%
     conditional_unnest_wider(var = "topLevelComment_snippet") %>%
     conditional_unnest_wider(var = "topLevelComment_snippet_authorChannelId") %>%
+    conditional_unnest_wider(var = "pageInfo") %>%
     dplyr::select(-c(id)) %>%
     # rename to make compatible with other comments later
     dplyr::rename_at(
